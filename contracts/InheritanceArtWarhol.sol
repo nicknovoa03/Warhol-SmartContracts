@@ -12,19 +12,18 @@ import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 contract iAIWarhol is ERC721, ERC721Enumerable, ERC721Burnable, Ownable {
   using Counters for Counters.Counter;
   Counters.Counter private _counter;
-
-  mapping(address => uint) private amountMinted;
-  uint public MAX_SUPPLY = 2209;
-  uint256 public price = 1400 ether;
+  mapping(address => uint) public minters;
+  mapping(uint256 => string) private tokenBaseURIs;
+  uint public MAX_SUPPLY = 50;
   bool public saleIsActive = false;
-  uint public constant maxPassTxn = 10;
-  string public baseURI;
   address private manager;
+  address private appCaller;
   IERC20 private iAI;
+  string public baseURI1;
+  string public baseURI2;
+  string public baseURI3;
 
-  constructor(address _tokenAddress) ERC721('9022 Collection', '9022') Ownable() {
-    iAI = IERC20(_tokenAddress);
-  }
+  constructor() ERC721('iAI test', 'iAI') Ownable() {}
 
   modifier onlyOwnerOrManager() {
     require(owner() == _msgSender() || manager == _msgSender(), 'Caller is not the owner or manager');
@@ -39,20 +38,8 @@ contract iAIWarhol is ERC721, ERC721Enumerable, ERC721Burnable, Ownable {
     return manager;
   }
 
-  function setBaseURI(string memory newBaseURI) external onlyOwnerOrManager {
-    baseURI = newBaseURI;
-  }
-
   function setMaxSupply(uint _maxSupply) external onlyOwnerOrManager {
     MAX_SUPPLY = _maxSupply;
-  }
-
-  function setPrice(uint256 _price) external onlyOwnerOrManager {
-    price = _price;
-  }
-
-  function _baseURI() internal view virtual override returns (string memory) {
-    return baseURI;
   }
 
   function totalToken() public view returns (uint256) {
@@ -63,8 +50,25 @@ contract iAIWarhol is ERC721, ERC721Enumerable, ERC721Burnable, Ownable {
     saleIsActive = !saleIsActive;
   }
 
-  function getAmountMinted(address _address) external view returns (uint) {
-    return amountMinted[_address];
+  function setBaseURI1(string calldata uri) external onlyOwnerOrManager {
+    baseURI1 = uri;
+  }
+
+  function setBaseURI12(string calldata uri) external onlyOwnerOrManager {
+    baseURI2 = uri;
+  }
+
+  function setBaseURI3(string calldata uri) external onlyOwnerOrManager {
+    baseURI3 = uri;
+  }
+
+  function setBaseURI(uint256 tokenId, string memory uri) internal onlyOwnerOrManager {
+    tokenBaseURIs[tokenId] = uri;
+  }
+
+  function baseURI(uint256 tokenId) public view returns (string memory) {
+    require(_exists(tokenId), 'Token does not exist');
+    return tokenBaseURIs[tokenId];
   }
 
   function withdrawAll(address _address) public onlyOwnerOrManager {
@@ -78,28 +82,39 @@ contract iAIWarhol is ERC721, ERC721Enumerable, ERC721Burnable, Ownable {
     iAI.transfer(_address, _amount);
   }
 
-  function reserveMintNFT(uint256 reserveAmount, address mintAddress) external onlyOwnerOrManager {
-    require(totalSupply() + reserveAmount <= MAX_SUPPLY, '9022 Collection Sold Out');
+  function reserveMintNFT(uint256 reserveAmount, address mintAddress, string calldata uri) external onlyOwnerOrManager {
+    require(totalSupply() + reserveAmount <= MAX_SUPPLY, 'Collection Sold Out');
+    uint counter = _counter.current();
     for (uint256 i = 0; i < reserveAmount; i++) {
-      _safeMint(mintAddress, _counter.current() + 1);
+      setBaseURI(counter + 1, uri);
+      _safeMint(mintAddress, counter + 1);
       _counter.increment();
     }
   }
 
-  function mintNFT(uint32 numberOfTokens) external payable {
+  function mint(uint iAIamount, uint numberOfTokens, uint uriNumber) external payable {
     require(saleIsActive, 'Sale is not active.');
     require(numberOfTokens >= 1, 'You must at least mint 1 Token');
-    require(amountMinted[msg.sender] + numberOfTokens <= maxPassTxn, 'Exceeds max amount per wallet');
-    require(totalSupply() + numberOfTokens <= MAX_SUPPLY, '9022 Collection Sold Out');
+    require(totalSupply() + numberOfTokens <= MAX_SUPPLY, 'Collection Sold Out');
 
-    iAI.transferFrom(msg.sender, address(this), price * numberOfTokens);
+    iAI.transferFrom(msg.sender, address(this), iAIamount);
+
+    string memory uri;
+    if (uriNumber == 1) {
+      uri = baseURI1;
+    } else if (uriNumber == 2) {
+      uri = baseURI2;
+    } else {
+      uri = baseURI3;
+    }
 
     for (uint256 i = 0; i < numberOfTokens; i++) {
       uint256 mintIndex = _counter.current() + 1;
       if (mintIndex <= MAX_SUPPLY) {
+        setBaseURI(mintIndex, uri);
         _safeMint(msg.sender, mintIndex);
+        minters[msg.sender];
         _counter.increment();
-        amountMinted[msg.sender] += 1;
       }
     }
   }
