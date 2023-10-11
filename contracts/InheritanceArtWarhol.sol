@@ -7,6 +7,8 @@ import '@openzeppelin/contracts/token/ERC721/extensions/ERC721Burnable.sol';
 import '@openzeppelin/contracts/access/Ownable.sol';
 import '@openzeppelin/contracts/utils/Address.sol';
 import '@openzeppelin/contracts/utils/Counters.sol';
+import '@openzeppelin/contracts/utils/Counters.sol';
+import '@openzeppelin/contracts/utils/Strings.sol';
 import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 
 contract iAIWarhol is ERC721, ERC721Enumerable, ERC721Burnable, Ownable {
@@ -18,7 +20,7 @@ contract iAIWarhol is ERC721, ERC721Enumerable, ERC721Burnable, Ownable {
   bool public saleIsActive = false;
   address private manager;
   address private appCaller;
-  IERC20 private iAI;
+  IERC20 public iAI;
   string public baseURI1;
   string public baseURI2;
   string public baseURI3;
@@ -28,6 +30,10 @@ contract iAIWarhol is ERC721, ERC721Enumerable, ERC721Burnable, Ownable {
   modifier onlyOwnerOrManager() {
     require(owner() == _msgSender() || manager == _msgSender(), 'Caller is not the owner or manager');
     _;
+  }
+
+  function setiAIaddress(address _tokenAddress) external onlyOwnerOrManager {
+    iAI = IERC20(_tokenAddress);
   }
 
   function setManager(address _manager) external onlyOwner {
@@ -69,6 +75,11 @@ contract iAIWarhol is ERC721, ERC721Enumerable, ERC721Burnable, Ownable {
   function baseURI(uint256 tokenId) public view returns (string memory) {
     require(_exists(tokenId), 'Token does not exist');
     return tokenBaseURIs[tokenId];
+  }
+
+  function tokenURI(uint256 tokenId) public view override returns (string memory) {
+    require(_exists(tokenId), 'Token does not exist');
+    return baseURI(tokenId);
   }
 
   function withdrawAll(address _address) public onlyOwnerOrManager {
